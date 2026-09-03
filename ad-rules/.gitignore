@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.coverage
+coverage.xml
+htmlcov/
+.ci-mamba/
+.ci-mamba-bin/
+.cache/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.venv/
+dist/
+site/
+public/
+report.xml

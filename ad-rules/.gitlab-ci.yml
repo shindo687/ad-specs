@@ -1,0 +1,97 @@
+stages:
+  - quality
+  - test
+  - docs
+  - package
+  - deploy
+
+variables:
+  CI_PYTHON_VERSION: "3.12"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  PIP_NO_INPUT: "1"
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PYTHONDONTWRITEBYTECODE: "1"
+
+default:
+  image: "agent-dispatcher-cn-hongkong.cr.volces.com/agent-gitlab/ci-default@sha256:0e865467df2dde63322d78064faebe159b71f6fd47f583c24e6ef34b4e76d0b7"
+  cache:
+    key: "python-${CI_COMMIT_REF_SLUG}"
+    paths:
+      - .cache/pip/
+  before_script:
+    - export MAMBA_ROOT_PREFIX="$CI_PROJECT_DIR/.ci-mamba"
+    - export MAMBA_BIN="$CI_PROJECT_DIR/.ci-mamba-bin/bin/micromamba"
+    - mkdir -p "$CI_PROJECT_DIR/.ci-mamba-bin"
+    - |
+      if command -v micromamba >/dev/null 2>&1 && micromamba --version | grep -Eq '(^|[[:space:]])2\.3\.2($|[[:space:]])'; then
+        MAMBA_BIN=$(command -v micromamba)
+      else
+        curl --fail --location --retry 4 --retry-delay 2 \
+          --output "$CI_PROJECT_DIR/.ci-mamba-bin/micromamba.tar.bz2" \
+          "https://micro.mamba.pm/api/micromamba/linux-64/2.3.2"
+        tar -xjf "$CI_PROJECT_DIR/.ci-mamba-bin/micromamba.tar.bz2" \
+          -C "$CI_PROJECT_DIR/.ci-mamba-bin"
+      fi
+    - $MAMBA_BIN create --yes --channel conda-forge --strict-channel-priority --name ci python="$CI_PYTHON_VERSION" pip
+    - eval "$("$MAMBA_BIN" shell hook --shell bash)"
+    - micromamba activate ci
+    - python --version
+    - python -m pip install --upgrade "pip==25.1.1"
+
+quality:
+  stage: quality
+  script:
+    - python -m pip install -e ".[dev]"
+    - python -m ruff check .
+    - python -m ruff format --check .
+    - python -m mypy
+
+tests:
+  stage: test
+  parallel:
+    matrix:
+      - CI_PYTHON_VERSION: ["3.10", "3.11", "3.12", "3.13"]
+  script:
+    - python -m pip install -e ".[dev]"
+    - python -m pytest --junitxml=report.xml --cov-report=term-missing --cov-report=xml:coverage.xml
+    - python examples/quickstart.py
+  coverage: '/TOTAL.*\s+(\d+(?:\.\d+)?%)/'
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+documentation:
+  stage: docs
+  script:
+    - python -m pip install -e ".[docs]"
+    - python -m mkdocs build --strict
+  artifacts:
+    paths:
+      - site/
+
+package:
+  stage: package
+  script:
+    - python -m pip install "build==1.2.2.post1"
+    - python -m build
+    - python -m pip install --force-reinstall dist/*.whl
+    - python -c "import chainrules; assert chainrules.__version__ == '0.1.0'"
+  artifacts:
+    paths:
+      - dist/
+
+pages-deploy:
+  stage: deploy
+  pages: true
+  script:
+    - python -m pip install -e ".[docs]"
+    - python -m mkdocs build --strict --site-dir public
+  artifacts:
+    paths:
+      - public/
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'

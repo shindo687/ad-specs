@@ -1,0 +1,71 @@
+site_name: ChainRules
+site_description: A minimal JVP/VJP rule interface for scientific Python
+repo_url: https://git.gewu-lab.ai/kun-agent/chainrules
+repo_name: kun-agent/chainrules
+edit_uri: -/edit/main/docs/
+
+theme:
+  name: material
+  language: zh
+  features:
+    - content.code.copy
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.top
+    - search.highlight
+    - search.suggest
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-7
+        name: 切换到深色模式
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep purple
+      toggle:
+        icon: material/brightness-4
+        name: 切换到浅色模式
+
+nav:
+  - 概览: index.md
+  - 设计原则: design-principles.md
+  - 使用指南: usage.md
+  - 最佳实践: best-practices.md
+  - 一致性测试: conformance.md
+  - 与 Julia ChainRules 的关系: chainrules.md
+  - API 参考: reference/api.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            heading_level: 2
+            members_order: source
+            show_root_heading: true
+            show_source: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+
+strict: true
